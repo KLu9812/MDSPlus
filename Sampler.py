@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 import igraph as ig
+import keras
 
 class InvalidDistanceException(Exception):
     "Raised when the distance between two points is invalid"
@@ -131,3 +132,36 @@ class sampler:
     def gen_random_reg_graph(n, d):
         graph = ig.Graph.K_Regular(n, d)
         return np.array(graph.distances())
+    
+    def gen_heavy_neg(n, q):
+        points = []
+        uniform_upper = math.sqrt(1/(n-q))
+        for i in range(n):
+            new_row = np.random.uniform(0, uniform_upper, n-q)
+            points.append(new_row)
+        return_matrix = np.zeros((n, n))
+        q_uniform_upper = math.sqrt(.05/(q-1))
+        neg_points = []
+        for i in range(n):
+            new_row = np.random.uniform(0, q_uniform_upper, q-1)
+            neg_points.append(new_row)
+        num_neg = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                distance = np.linalg.norm(points[i] - points[j])**2
+                distance -= np.linalg.norm(neg_points[i] - neg_points[j])**2
+                distance -= ((j - i)*.3/n)**2
+                distance = math.sqrt(distance)
+                if distance < 0:
+                    num_neg += 1
+                return_matrix[i][j] = distance
+                return_matrix[j][i] = distance
+        print("Number of Negative Generated Distances: " + str(num_neg))
+        return return_matrix
+
+    #Currently Unusable    
+    def mnist(n):
+        mnist = keras.datasets.mnist
+        (train_x, train_y), (test_x, test_y) = mnist.load_data()
+    
+    

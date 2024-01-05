@@ -22,8 +22,15 @@ class mds():
     q = 0
     mdsp_distance_matrix = None
     mds_distance_matrix = None
+    mds_distort = 0
+    mdsp_distort = 0
     mds_distorts = []
     mdsp_distorts = []
+    num_negative = 0
+    mdsp_additive_error = 0
+    mds_additive_error = 0
+    mdsp_scaled_additive_error = 0
+    mds_scaled_additive_error = 0
     
     #Constructor with the option to set distance matrix later
     def __init__(self, distance_matrix = None):
@@ -46,12 +53,13 @@ class mds():
         return
     
     def graph_eigenvalues(self):
-        fig, ax = plt.subplots(2)
-        ax[0].hist(self.eigenvalues, np.arange(np.floor(np.min(self.eigenvalues)),
-                                               np.ceil(np.max(self.eigenvalues)),1), log=True)
+        fig, ax = plt.subplots(1)
+        ax.hist(self.eigenvalues, np.arange(np.floor(np.min(self.eigenvalues)),
+                                               np.ceil(np.max(self.eigenvalues)) + 1, 1), log=True)
+        plt.title("Eigenvalues")
         plt.show()
     
-    def mdsp_distance_matrix(self, verbose = True):
+    def gen_mdsp_distance_matrix(self, verbose = True):
         n = len(self.distance_matrix)
         self.mdsp_distance_matrix = np.zeros((n, n))
         for i in range(n):
@@ -68,7 +76,7 @@ class mds():
                 self.mdsp_distance_matrix[i][j] = mdsp_distance
                 self.mdsp_distance_matrix[j][i] = mdsp_distance
     
-    def mds_distance_matrix(self, verbose = True):
+    def gen_mds_distance_matrix(self, verbose = True):
         n = len(self.distance_matrix)
         self.mds_distance_matrix = np.zeros((n, n))
         for i in range(n):
@@ -102,14 +110,39 @@ class mds():
             mds_distorts[i] /= mds_median
             if mds_distorts[i] < 1:
                 mds_distorts[i] = 1.0/mds_distorts[i]
+        self.mdsp_distort = 10**np.average(np.log10(mdsp_distorts))
+        self.mds_distort = 10**np.average(np.log10(mds_distorts))
         self.mdsp_distorts = mdsp_distorts
         self.mds_distorts = mds_distorts
+        self.num_negative = num_negative
         print("MDSPlus Highest Distortion: " + str(max(mdsp_distorts)))
         print("MDS Highest Distortion: " + str(max(mds_distorts)))
         print("MDSPlus Geometric Average Distortion: " + str(10**np.average(np.log10(mdsp_distorts))))
         print("Number Distances Negative: " + str(num_negative))
         print("MDS Geometric Average Distortion: " + str(10**np.average(np.log10(mds_distorts))))
         
+        
+    def additive_error(self):
+        mds_error = np.linalg.norm(self.mds_distance_matrix - self.distance_matrix)
+        mdsp_error = np.linalg.norm(self.mdsp_distance_matrix-self.distance_matrix)
+        print("MDSPlus Additive Error: " + str(mdsp_error))
+        print("MDS Additive Error: " + str(mds_error))
+        self.mdsp_additive_error = mdsp_error
+        self.mds_additive_error = mds_error
+    
+    def scaled_additive_error(self):
+        flattened_distance = self.distance_matrix.flatten()
+        flattened_mds = self.mds_distance_matrix.flatten()
+        flattened_mdsp = self.mdsp_distance_matrix.flatten()
+        mds_error = np.linalg.norm(flattened_distance - np.dot(flattened_mds, flattened_distance)
+                                   /np.linalg.norm(flattened_mds)**2*flattened_mds)
+        mdsp_error = np.linalg.norm(flattened_distance - np.dot(flattened_mdsp, flattened_distance)
+                                   /np.linalg.norm(flattened_mdsp)**2*flattened_mdsp)
+        print("MDSPlus Scaled Additive Error: " + str(mdsp_error))
+        print("MDS Scaled Additive Error: " + str(mds_error))
+        self.mdsp_scaled_additive_error = mdsp_error
+        self.mds_scaled_additive_error = mds_error
+    
     #Currently unusable
     def add_mult_distortion_analysis(self, add_dist):
         n = len(self.distance_matrix)
@@ -146,14 +179,36 @@ class mds():
     
     def analysis_graphs(self):
         fig, ax = plt.subplots(3)
-        ax[0].hist(np.log10(self.mdsp_distorts), np.arange(0,3,.25), log=True)
+        ax[0].hist(np.log10(self.mdsp_distorts), np.arange(0,8,.25), log=True)
         ax[1].hist(np.log10(self.rhos), np.arange(-3,0,.25), log=True)
-        ax[2].hist(np.log10(self.mds_distorts), np.arange(0,3,.25), log=True)
+        ax[2].hist(np.log10(self.mds_distorts), np.arange(0,8,.25), log=True)
+    
+    # def mdsplus(self, target_dimension):
+    #     n = len(self.distance_matrix)
+    #     pos = []
+    #     neg = []
+    #     for i in range(n):
+    #         if self.eigenvalues[i] < 0:
+    #             neg.append(i)
+    #         elif self.eigenvalues[i] > 0:
+    #             pos.append(i)
+    #     self.p = len(pos)
+    #     self.q = len(neg)
+        
+    #     sorted_indices = np.argsort(np.absolute(self.eigenvalues))
+    #     pos = np.intersect1d(pos, sorted_indices[n-target_dimension:n], assume_unique = True)
+    #     neg = np.intersect1d(neg, sorted_indices[n-target_dimension:n], assume_unique = True)
+    #     self.r = len(pos)
+    #     self.s = len(neg)
+    #     self.mdsp_pos_vecs = np.take(self.pq_embedding, pos, axis = 1)
+    #     self.mdsp_neg_vecs= np.take(self.pq_embedding, neg, axis = 1)
+    #     return
     
     def mdsplus(self, target_dimension):
         n = len(self.distance_matrix)
         pos = []
         neg = []
+
         for i in range(n):
             if self.eigenvalues[i] < 0:
                 neg.append(i)
@@ -162,13 +217,28 @@ class mds():
         self.p = len(pos)
         self.q = len(neg)
         
-        sorted_indices = np.argsort(np.absolute(self.eigenvalues))
-        pos = np.intersect1d(pos, sorted_indices[n-target_dimension:n], assume_unique = True)
-        neg = np.intersect1d(neg, sorted_indices[n-target_dimension:n], assume_unique = True)
-        self.r = len(pos)
-        self.s = len(neg)
-        self.mdsp_pos_vecs = np.take(self.pq_embedding, pos, axis = 1)
-        self.mdsp_neg_vecs= np.take(self.pq_embedding, neg, axis = 1)
+        sorted_indices = np.argsort(self.eigenvalues)
+        pos_selected = []
+        neg_selected = []
+        #c_1 = np.sum(np.square(self.eigenvalues))
+        c_2l = np.sum(self.eigenvalues)
+        neg_index = 0
+        pos_index = len(self.eigenvalues) - 1
+        for i in range(target_dimension):
+            if c_2l < 0:
+                neg_selected.append(sorted_indices[neg_index])
+                #c_1 -= self.eigenvalues[sorted_indices[neg_index]]**2
+                c_2l -= self.eigenvalues[sorted_indices[neg_index]]
+                neg_index += 1
+            elif c_2l >= 0:
+                pos_selected.append(sorted_indices[pos_index])
+                #c_1 -= self.eigenvalues[sorted_indices[pos_index]]**2
+                c_2l -= self.eigenvalues[sorted_indices[pos_index]]
+                pos_index -= 1
+        self.r = len(pos_selected)
+        self.s = len(neg_selected)
+        self.mdsp_pos_vecs = np.take(self.pq_embedding, pos_selected, axis = 1)
+        self.mdsp_neg_vecs= np.take(self.pq_embedding, neg_selected, axis = 1)
         return
     
     def mdsplusmanual(self, td1, td2):
