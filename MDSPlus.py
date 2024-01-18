@@ -15,8 +15,11 @@ class mds():
     eigenvalues = None
     pq_embedding = None
     rhos = None
+    mdsp_vecs = None
     mdsp_pos_vecs = None
     mdsp_neg_vecs = None
+    mdsp_coords = None
+    mds_coords = None
     mds_vecs = None
     p = 0
     q = 0
@@ -54,8 +57,9 @@ class mds():
     
     def graph_eigenvalues(self):
         fig, ax = plt.subplots(1)
+        step_size = (np.ceil(np.max(self.eigenvalues)) + 1 - np.floor(np.min(self.eigenvalues)))/10
         ax.hist(self.eigenvalues, np.arange(np.floor(np.min(self.eigenvalues)),
-                                               np.ceil(np.max(self.eigenvalues)) + 1, 1), log=True)
+                                               np.ceil(np.max(self.eigenvalues)) + 1, step_size), log=True)
         plt.title("Eigenvalues")
         plt.show()
     
@@ -237,8 +241,11 @@ class mds():
                 pos_index -= 1
         self.r = len(pos_selected)
         self.s = len(neg_selected)
+        all_selected = pos_selected + neg_selected
+        self.mdsp_coords = all_selected
         self.mdsp_pos_vecs = np.take(self.pq_embedding, pos_selected, axis = 1)
         self.mdsp_neg_vecs= np.take(self.pq_embedding, neg_selected, axis = 1)
+        self.mdsp_vecs = np.take(self.pq_embedding, all_selected, axis = 1)
         return
     
     def mdsplusmanual(self, td1, td2):
@@ -263,16 +270,20 @@ class mds():
                 pos_indices.append(sorted_indices[index])
             elif self.eigenvalues[sorted_indices[index]] < 0 and len(neg_indices) < td2:
                 neg_indices.append(sorted_indices[index])
+        all_indices = pos_indices + neg_indices
+        self.mdsp_coords = all_indices
         self.r = len(pos_indices)
         self.s = len(neg_indices)
         self.mdsp_pos_vecs = np.take(self.pq_embedding, pos_indices, axis = 1)
         self.mdsp_neg_vecs= np.take(self.pq_embedding, neg_indices, axis = 1)
+        self.mdsp_vecs = np.take(self.pq_embedding, all_indices, axis = 1)
         return
     
     def mds(self, target_dimension):
         n = len(self.distance_matrix)
         sorted_indices = np.argsort(self.eigenvalues)
         self.mds_vecs = []
+        self.mds_coords = sorted_indices[n-target_dimension:n]
         for i in range(n):
             self.mds_vecs.append(np.take(self.pq_embedding[i], sorted_indices[n-target_dimension:n]))
         return

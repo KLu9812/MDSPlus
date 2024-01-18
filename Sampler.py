@@ -3,7 +3,8 @@ import numpy as np
 import random
 import math
 import igraph as ig
-import keras
+import tensorflow.keras as kt
+from sklearn.neural_network import MLPClassifier
 
 class InvalidDistanceException(Exception):
     "Raised when the distance between two points is invalid"
@@ -158,10 +159,72 @@ class sampler:
                 return_matrix[j][i] = distance
         print("Number of Negative Generated Distances: " + str(num_neg))
         return return_matrix
-
-    #Currently Unusable    
-    def mnist(n):
-        mnist = keras.datasets.mnist
-        (train_x, train_y), (test_x, test_y) = mnist.load_data()
     
+    #Embedding chosen data sets. Available Methods and Data Sets:
+    #MNIST
+    #noise, knn, missing
+    def chosen_data(n, data, method, *method_args):
+        working_data = []
+        if data == "mnist":
+            mnist = kt.datasets.mnist
+            (train_x, train_y), (test_x, test_y) = mnist.load_data()
+            working_data = train_x[:n]
+            working_data = working_data.reshape(n, 28*28)
+        
+        if data == "fashion_mnist":
+            fashion_mnist = kt.datasets.fashion_mnist
+            (train_x, train_y), (test_x, test_y) = fashion_mnist.load_data()
+            working_data = train_x[:n]
+            working_data = working_data.reshape(n, 28*28)
+        
+        if data =="cifar10":
+            cifar10 = kt.datasets.cifar10
+            (train_x, train_y), (test_x, test_y) = cifar10.load_data()
+            working_data = train_x[:n]
+            working_data = working_data.reshape(n, 32*32*3)
+        
+        distance_matrix = np.zeros((n, n))
+        if method == "noise":
+            scale = np.max(working_data) - np.min(working_data)
+            scale *= np.sqrt(len(working_data[0])) / 500
+            for i in range(n):
+                for j in range(i + 1, n):
+                    distance = np.linalg.norm(working_data[i] - working_data[j])
+                    distance += np.random.normal(loc = 0, scale = scale)
+                    distance_matrix[i][j] = distance
+                    distance_matrix[j][i] = distance
+        
+        if method == "knn":
+            k = method_args[0]
+            edges = []
+            for i in range(n):
+                distances = np.zeros(n)
+                for j in range(n):
+                    distances[j] = np.linalg.norm(working_data[i] - working_data[j])
+                k_closest = np.argsort(distances)[1:k+1]
+                for j in k_closest:
+                    edges.append([i, j])
+                    edges.append([j, i])
+            graph = ig.Graph(n=n, edges=edges)
+            distance_matrix = np.array(graph.distances())
+                
+        if method == "missing":
+            num_missing = method_args[0]
+            missing = np.random.choice(np.arange(n*len(working_data[0]), dtype=np.int64), num_missing, replace = False)
+            missing_matrix = np.ones((n, len(working_data[0])))
+            for m in missing:
+                missing_matrix[m//len(working_data[0])][m%len(working_data[0])] = 0
+            for i in range(n):
+                for j in range(i+1, n):
+                    v1 = np.multiply(working_data[i], missing_matrix[i])
+                    v1 = np.multiply(v1, missing_matrix[j])
+                    v2 = np.multiply(working_data[j], missing_matrix[i])
+                    v2 = np.multiply(v2, missing_matrix[j])
+                    distance = np.linalg.norm(v1-v2)
+                    distance_matrix[i][j] = distance
+                    distance_matrix[j][i] = distance
+        
+        return distance_matrix, train_y[:n]
+        
+        
     

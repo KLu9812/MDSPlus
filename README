@@ -1,4 +1,4 @@
 Runs on Python
 
 Required Packages:
-numpy, matplotlib
+numpy, matplotlib, keras, tensorflow, igraph, sklearn
