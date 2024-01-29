@@ -322,7 +322,7 @@ class mds():
         self.bs = len(neg_selected)
         all_selected = pos_selected + neg_selected
         self.mdspb_coords = all_selected
-        new_eigenvalues = self.eigenvalues - c_2l / (target_dimension + 1)
+        new_eigenvalues = self.eigenvalues + c_2l / (target_dimension + 1)
         new_pq_embedding = self.eigenvectors.copy()
         for j in range(n):
             for k in range(n):

@@ -47,11 +47,10 @@ def generate_comparison_graphs():
     # test_y = np.ravel(ys[1000:])
     # mds_handler = mds(both_distances)
     
-    distance_matrix = sampler.ball_data(1000)
+    distance_matrix = sampler.gen_heavy_neg(1000, 900)
     mds_handler = mds(distance_matrix)
     mds_handler.find_pq_embedding()
     mds_handler.graph_eigenvalues()
-    mds_handler.print_pq()
     
     mdspb_distorts = []
     mdsp_distorts = []
@@ -93,6 +92,8 @@ def generate_comparison_graphs():
         mds_unscaled_errors.append(mds_handler.mds_additive_error)
         r.append(mds_handler.r)
         s.append(mds_handler.s)
+        
+        mds_handler.print_pq()
         
         # clf = MLPClassifier(solver='adam', hidden_layer_sizes=(10, 10, 10), random_state=1)
         # clf.fit(mds_handler.mdsp_vecs[:1000], train_y)
