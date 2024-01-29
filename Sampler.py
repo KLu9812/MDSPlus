@@ -4,7 +4,9 @@ import random
 import math
 import igraph as ig
 import tensorflow.keras as kt
-from sklearn.neural_network import MLPClassifier
+# from sklearn.neural_network import MLPClassifier
+
+np.random.seed(20)
 
 class InvalidDistanceException(Exception):
     "Raised when the distance between two points is invalid"
@@ -160,8 +162,56 @@ class sampler:
         print("Number of Negative Generated Distances: " + str(num_neg))
         return return_matrix
     
+    def ball_data(n):
+        balls = []
+        for i in range(n):
+            point = np.random.uniform(0, 100, 10)
+            balls.append(point)
+        
+        # distance_matrix = np.zeros((n, n))
+        # for i in range(n):
+        #     for j in range(i+1, n):
+        #         distance = np.linalg.norm(balls[i] - balls[j])
+        #         distance_matrix[i][j] = distance
+        #         distance_matrix[j][i] = distance
+        
+        # radii = []
+        # for i in range(n):
+        #     radius = np.random.uniform(0,5)
+        #     if np.random.uniform(0,1) < 0.1:
+        #         radius = np.min(np.append(distance_matrix[i][:i], distance_matrix[i][i+1:])) * .4
+        #     radii.append(radius)
+        # for i in range(n):
+        #     for j in range(n):
+        #         if i == j:
+        #             continue
+        #         distance_matrix[i][j] -= radii[i]
+        #         distance_matrix[j][i] -= radii[i]
+        
+        distance_matrix = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i+1, n):
+                distance = np.linalg.norm(balls[i] - balls[j])
+                distance_matrix[i][j] = distance
+                distance_matrix[j][i] = distance
+        
+        for i in range(n):
+            radius = 0
+            if np.random.uniform(0,1) < 0.1:
+                radius = np.min(np.append(distance_matrix[i][:i], distance_matrix[i][i+1:])) * .8
+            else:
+                radius = np.random.uniform(0, 5)
+            for j in range(n):
+                if i == j:
+                    continue
+                distance_matrix[i][j] -= radius
+                distance_matrix[j][i] -= radius
+                
+        
+        return distance_matrix
+    
     #Embedding chosen data sets. Available Methods and Data Sets:
-    #MNIST
+    #mnist, fashion_mnist, cifar10
     #noise, knn, missing
     def chosen_data(n, data, method, *method_args):
         working_data = []
