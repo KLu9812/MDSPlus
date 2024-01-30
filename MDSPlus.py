@@ -66,6 +66,7 @@ class mds():
     def gen_mdsp_distance_matrix(self, verbose = True):
         n = len(self.distance_matrix)
         self.mdsp_distance_matrix = np.zeros((n, n))
+        self.mdsp_squared_distance_matrix = np.zeros((n, n))
         for i in range(n):
             if verbose:
                 if i % (n // 100) == 0:
@@ -73,6 +74,8 @@ class mds():
             for j in range(i+1, n):
                 mdsp_distance = np.linalg.norm(self.mdsp_pos_vecs[j] - self.mdsp_pos_vecs[i])**2
                 mdsp_distance -= np.linalg.norm(self.mdsp_neg_vecs[j] - self.mdsp_neg_vecs[i])**2
+                self.mdsp_squared_distance_matrix[i][j] = mdsp_distance
+                self.mdsp_squared_distance_matrix[j][i] = mdsp_distance
                 if mdsp_distance < 0:
                     mdsp_distance = -np.sqrt(np.absolute(mdsp_distance))
                 else:
@@ -83,6 +86,7 @@ class mds():
     def gen_mdspb_distance_matrix(self, verbose = True):
         n = len(self.distance_matrix)
         self.mdspb_distance_matrix = np.zeros((n, n))
+        self.mdspb_squared_distance_matrix = np.zeros((n, n))
         for i in range(n):
             if verbose:
                 if i % (n // 100) == 0:
@@ -90,6 +94,8 @@ class mds():
             for j in range(i+1, n):
                 mdspb_distance = np.linalg.norm(self.mdspb_pos_vecs[j] - self.mdspb_pos_vecs[i])**2
                 mdspb_distance -= np.linalg.norm(self.mdspb_neg_vecs[j] - self.mdspb_neg_vecs[i])**2
+                self.mdspb_squared_distance_matrix[i][j] = mdspb_distance
+                self.mdspb_squared_distance_matrix[j][i] = mdspb_distance
                 if mdspb_distance < 0:
                     mdspb_distance = -np.sqrt(np.absolute(mdspb_distance))
                 else:
@@ -100,12 +106,15 @@ class mds():
     def gen_mds_distance_matrix(self, verbose = True):
         n = len(self.distance_matrix)
         self.mds_distance_matrix = np.zeros((n, n))
+        self.mds_squared_distance_matrix = np.zeros((n, n))
         for i in range(n):
             if verbose:
                 if i % (n // 100) == 0:
                     print(i // (n // 100))
             for j in range(i+1, n):
                 mds_distance = np.linalg.norm(self.mds_vecs[j] - self.mds_vecs[i])
+                self.mds_squared_distance_matrix[i][j] = mds_distance**2
+                self.mds_squared_distance_matrix[j][i] = mds_distance**2
                 self.mds_distance_matrix[i][j] = mds_distance
                 self.mds_distance_matrix[j][i] = mds_distance
     
@@ -155,9 +164,9 @@ class mds():
         
         
     def additive_error(self):
-        mds_error = np.linalg.norm(self.mds_distance_matrix - self.distance_matrix)
-        mdsp_error = np.linalg.norm(self.mdsp_distance_matrix-self.distance_matrix)
-        mdspb_error = np.linalg.norm(self.mdspb_distance_matrix-self.distance_matrix)
+        mds_error = np.linalg.norm(self.mds_squared_distance_matrix - self.distance_squared_matrix)
+        mdsp_error = np.linalg.norm(self.mdsp_squared_distance_matrix-self.distance_squared_matrix)
+        mdspb_error = np.linalg.norm(self.mdspb_squared_distance_matrix-self.distance_squared_matrix)
         print("MDSPlus Additive Error: " + str(mdsp_error))
         print("MDSPlusBonus Additive Error: " + str(mdspb_error))
         print("MDS Additive Error: " + str(mds_error))
@@ -166,10 +175,10 @@ class mds():
         self.mds_additive_error = mds_error
     
     def scaled_additive_error(self):
-        flattened_distance = self.distance_matrix.flatten()
-        flattened_mds = self.mds_distance_matrix.flatten()
-        flattened_mdsp = self.mdsp_distance_matrix.flatten()
-        flattened_mdspb = self.mdspb_distance_matrix.flatten()
+        flattened_distance = self.distance_squared_matrix.flatten()
+        flattened_mds = self.mds_squared_distance_matrix.flatten()
+        flattened_mdsp = self.mdsp_squared_distance_matrix.flatten()
+        flattened_mdspb = self.mdspb_squared_distance_matrix.flatten()
         mds_error = np.linalg.norm(flattened_distance - np.dot(flattened_mds, flattened_distance)
                                    /np.linalg.norm(flattened_mds)**2*flattened_mds)
         mdsp_error = np.linalg.norm(flattened_distance - np.dot(flattened_mdsp, flattened_distance)
@@ -378,6 +387,7 @@ class mds():
         for a in range(n):
             for b in range(n):
                 distance_squared_matrix[a][b] = self.distance_matrix[a][b] ** 2
+        self.distance_squared_matrix = distance_squared_matrix
         centering = np.identity(n) - 1/n*np.ones((n,n))
         gram = -1/2*np.matmul(centering, distance_squared_matrix)
         gram = np.matmul(gram, centering)

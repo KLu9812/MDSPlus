@@ -47,7 +47,7 @@ def generate_comparison_graphs():
     # test_y = np.ravel(ys[1000:])
     # mds_handler = mds(both_distances)
     
-    distance_matrix = sampler.gen_heavy_neg(1000, 900)
+    distance_matrix = sampler.chosen_data(1000, "mnist", "knn", 2)[0]
     mds_handler = mds(distance_matrix)
     mds_handler.find_pq_embedding()
     mds_handler.graph_eigenvalues()
@@ -67,7 +67,7 @@ def generate_comparison_graphs():
     mdsp_acc = []
     mds_acc = []
     
-    dimensions = list(range(1, 1001, 4))
+    dimensions = list(range(20, 24, 4))
     for target_dimension in dimensions:
         print(target_dimension)
         mds_handler.mdsplus(target_dimension)
