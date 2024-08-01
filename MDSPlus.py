@@ -40,6 +40,7 @@ class mds():
         self.distance_matrix = distance_matrix
         return
     
+    
     def calculate_rho(self, verbose = True):
         n = len(self.distance_matrix)
         self.rhos = np.zeros((n, n))
@@ -164,9 +165,9 @@ class mds():
         
         
     def additive_error(self):
-        mds_error = np.linalg.norm(self.mds_squared_distance_matrix - self.distance_squared_matrix)
-        mdsp_error = np.linalg.norm(self.mdsp_squared_distance_matrix-self.distance_squared_matrix)
-        mdspb_error = np.linalg.norm(self.mdspb_squared_distance_matrix-self.distance_squared_matrix)
+        mds_error = np.linalg.norm(self.mds_squared_distance_matrix - self.distance_squared_matrix)**2
+        mdsp_error = np.linalg.norm(self.mdsp_squared_distance_matrix-self.distance_squared_matrix)**2
+        mdspb_error = np.linalg.norm(self.mdspb_squared_distance_matrix-self.distance_squared_matrix)**2
         print("MDSPlus Additive Error: " + str(mdsp_error))
         print("MDSPlusBonus Additive Error: " + str(mdspb_error))
         print("MDS Additive Error: " + str(mds_error))
@@ -180,11 +181,11 @@ class mds():
         flattened_mdsp = self.mdsp_squared_distance_matrix.flatten()
         flattened_mdspb = self.mdspb_squared_distance_matrix.flatten()
         mds_error = np.linalg.norm(flattened_distance - np.dot(flattened_mds, flattened_distance)
-                                   /np.linalg.norm(flattened_mds)**2*flattened_mds)
+                                   /np.linalg.norm(flattened_mds)**2*flattened_mds)**2
         mdsp_error = np.linalg.norm(flattened_distance - np.dot(flattened_mdsp, flattened_distance)
-                                   /np.linalg.norm(flattened_mdsp)**2*flattened_mdsp)
+                                   /np.linalg.norm(flattened_mdsp)**2*flattened_mdsp)**2
         mdspb_error = np.linalg.norm(flattened_distance - np.dot(flattened_mdspb, flattened_distance)
-                                   /np.linalg.norm(flattened_mdspb)**2*flattened_mdspb)
+                                   /np.linalg.norm(flattened_mdspb)**2*flattened_mdspb)**2
         print("MDSPlus Scaled Additive Error: " + str(mdsp_error))
         print("MDSPlusBonus Scaled Additive Error: " + str(mdspb_error))
         print("MDS Scaled Additive Error: " + str(mds_error))
@@ -270,21 +271,22 @@ class mds():
         sorted_indices = np.argsort(self.eigenvalues)
         pos_selected = []
         neg_selected = []
-        #c_1 = np.sum(np.square(self.eigenvalues))
+        c_1 = np.sum(np.square(self.eigenvalues))
         c_2l = np.sum(self.eigenvalues)
         neg_index = 0
         pos_index = len(self.eigenvalues) - 1
         for i in range(target_dimension):
             if c_2l < 0:
                 neg_selected.append(sorted_indices[neg_index])
-                #c_1 -= self.eigenvalues[sorted_indices[neg_index]]**2
+                c_1 -= self.eigenvalues[sorted_indices[neg_index]]**2
                 c_2l -= self.eigenvalues[sorted_indices[neg_index]]
                 neg_index += 1
             elif c_2l >= 0:
                 pos_selected.append(sorted_indices[pos_index])
-                #c_1 -= self.eigenvalues[sorted_indices[pos_index]]**2
+                c_1 -= self.eigenvalues[sorted_indices[pos_index]]**2
                 c_2l -= self.eigenvalues[sorted_indices[pos_index]]
                 pos_index -= 1
+        self.c1c2o = 4 * (c_1 + c_2l**2)
         self.r = len(pos_selected)
         self.s = len(neg_selected)
         all_selected = pos_selected + neg_selected
@@ -330,6 +332,8 @@ class mds():
         self.br = len(pos_selected)
         self.bs = len(neg_selected)
         all_selected = pos_selected + neg_selected
+        self.c1c2 = c_1 + c_2l**2 / (target_dimension + 1)
+        self.c1c2 *= 4
         self.mdspb_coords = all_selected
         new_eigenvalues = self.eigenvalues + c_2l / (target_dimension + 1)
         new_pq_embedding = self.eigenvectors.copy()
@@ -384,10 +388,13 @@ class mds():
     def find_pq_embedding(self):
         n = len(self.distance_matrix)
         distance_squared_matrix = np.zeros((n, n), dtype=np.double)
-        for a in range(n):
-            for b in range(n):
-                distance_squared_matrix[a][b] = self.distance_matrix[a][b] ** 2
-        self.distance_squared_matrix = distance_squared_matrix
+        if self.distance_squared_matrix is None:
+            for a in range(n):
+                for b in range(n):
+                    distance_squared_matrix[a][b] = self.distance_matrix[a][b] ** 2
+            self.distance_squared_matrix = distance_squared_matrix
+        else:
+            distance_squared_matrix = self.distance_squared_matrix
         centering = np.identity(n) - 1/n*np.ones((n,n))
         gram = -1/2*np.matmul(centering, distance_squared_matrix)
         gram = np.matmul(gram, centering)

@@ -210,6 +210,20 @@ class sampler:
         
         return distance_matrix
     
+    def sphere_metric_random(n, max_r):
+        distance_matrix = np.zeros((n, n))
+        balls = []
+        for i in range(n):
+            point = (np.random.uniform(0, .5, 4), np.random.uniform(0, max_r))
+            balls.append(point)
+        for i in range(n):
+            for j in range(i, n):
+                distance = np.linalg.norm(balls[i][0] - balls[j][0])**2
+                distance -= np.linalg.norm(balls[i][1] + balls[j][1])**2
+                distance_matrix[i][j] = distance
+                distance_matrix[j][i] = distance
+        return distance_matrix
+    
     #Embedding chosen data sets. Available Methods and Data Sets:
     #mnist, fashion_mnist, cifar10
     #noise, knn, missing
