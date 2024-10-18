@@ -12,12 +12,15 @@ class mds():
     
     #Listing all class variables
     distance_matrix = None
+    distance_squared_matrix = None
     eigenvalues = None
     pq_embedding = None
     rhos = None
     mdsp_vecs = None
     mdsp_pos_vecs = None
     mdsp_neg_vecs = None
+    mdspb_pos_vecs = None
+    mdspb_neg_vecs = None
     mdsp_coords = None
     mds_coords = None
     mds_vecs = None
@@ -25,6 +28,10 @@ class mds():
     q = 0
     mdsp_distance_matrix = None
     mds_distance_matrix = None
+    mdspb_distance_matrix = None
+    mdsp_squared_distance_matrix = None
+    mds_squared_distance_matrix = None
+    mdspb_squared_distance_matrix = None
     mds_distort = 0
     mdsp_distort = 0
     mds_distorts = []
@@ -165,15 +172,21 @@ class mds():
         
         
     def additive_error(self):
-        mds_error = np.linalg.norm(self.mds_squared_distance_matrix - self.distance_squared_matrix)**2
-        mdsp_error = np.linalg.norm(self.mdsp_squared_distance_matrix-self.distance_squared_matrix)**2
-        mdspb_error = np.linalg.norm(self.mdspb_squared_distance_matrix-self.distance_squared_matrix)**2
-        print("MDSPlus Additive Error: " + str(mdsp_error))
-        print("MDSPlusBonus Additive Error: " + str(mdspb_error))
-        print("MDS Additive Error: " + str(mds_error))
-        self.mdsp_additive_error = mdsp_error
-        self.mdspb_additive_error = mdspb_error
-        self.mds_additive_error = mds_error
+        if self.mdsp_squared_distance_matrix is not None:
+            mdsp_error = np.linalg.norm(self.mdsp_squared_distance_matrix-self.distance_squared_matrix)**2
+            print("MDSPlus Additive Error: " + str(mdsp_error))
+            self.mdsp_additive_error = mdsp_error
+        if self.mdspb_squared_distance_matrix is not None:
+            mdspb_error = np.linalg.norm(self.mdspb_squared_distance_matrix-self.distance_squared_matrix)**2
+            print("MDSPlusBonus Additive Error: " + str(mdspb_error))
+            self.mdspb_additive_error = mdspb_error
+        if self.mds_squared_distance_matrix is not None:
+            mds_error = np.linalg.norm(self.mds_squared_distance_matrix - self.distance_squared_matrix)**2
+            print("MDS Additive Error: " + str(mds_error))
+            self.mds_additive_error = mds_error
+        
+        
+        
     
     def scaled_additive_error(self):
         flattened_distance = self.distance_squared_matrix.flatten()
@@ -293,7 +306,7 @@ class mds():
         self.mdsp_coords = all_selected
         self.mdsp_pos_vecs = np.take(self.pq_embedding, pos_selected, axis = 1)
         self.mdsp_neg_vecs= np.take(self.pq_embedding, neg_selected, axis = 1)
-        self.mdsp_vecs = np.take(self.pq_embedding, all_selected, axis = 1)
+        self.mdsp_vecs = np.append(self.mdsp_pos_vecs, self.mdsp_neg_vecs, axis = 1)
         return
     
     def mdsplusbonus(self, target_dimension):

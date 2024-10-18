@@ -7,38 +7,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def standard_one_run():
-    target_dimension = 400
-    distances = sampler.chosen_data(1000, "mnist", "missing", 28*28*100)
-    
+def standard_one_run(distances, target_dimension):
     mds_handler = mds(distances)
-    print("Gened")
     mds_handler.find_pq_embedding()
-    print("Found PQ Embedding")
     mds_handler.mdsplus(target_dimension)
-    # mds_handler.mdsplusmanual(60, 40)
-    print("Finished MDSPlus")
     mds_handler.mds(target_dimension)
-    print("Finished MDS")
+    mds_handler.mdsplusbonus(target_dimension)
     mds_handler.graph_eigenvalues()
-    print("Graphed Eigenvalues")
-    mds_handler.calculate_rho()
-    print("Calculated Rho")
-    mds_handler.gen_mdsp_distance_matrix()
-    print("Finished Calculating MDSPlus Distance Matrix")
-    mds_handler.gen_mds_distance_matrix()
-    print("Finished Calculating MDS Distance Matrix")
+    mds_handler.calculate_rho(verbose = False)
+    mds_handler.gen_mdsp_distance_matrix(verbose = False)
+    mds_handler.gen_mds_distance_matrix(verbose = False)
+    mds_handler.gen_mdspb_distance_matrix(verbose = False)
     mds_handler.additive_error()
-    print("Finished Calculating Additive Error")
     mds_handler.scaled_additive_error()
-    print("Finished Calculating Scaled Additive Error")
     mds_handler.mult_distortion_analysis()
-    #mds_handler.add_mult_distortion_analysis()
-    print("Completed Distortion Analysis")
     mds_handler.print_pq()
-    print("Printed PQ")
     mds_handler.analysis_graphs()
-    print("Finished Graphing")  
 
 
 def generate_comparison_graphs():
@@ -153,68 +137,47 @@ def generate_comparison_graphs():
     ax[5].plot(dimensions, mdsp_c3, label = "Neuc-MDS C3/Stress")
     ax[5].legend()
 
-def landmark_mds(distance_matrix, k):
+def landmark_mds(distance_matrix, k, t):
     n = len(distance_matrix)
-    return_matrix = np.zeros((n, n))
+    distance_squared_matrix = np.square(distance_matrix)
+    landmark_matrix = np.zeros((k, k))
+    indices_picked = np.random.choice(n, size = k, replace = False)
+    for i in range(len(indices_picked)):
+        for j in range(len(indices_picked)):
+            landmark_matrix[i][j] = distance_matrix[indices_picked[i], indices_picked[j]]
     
+    mds_handler = mds(landmark_matrix)
+    mds_handler.find_pq_embedding()
+    mds_handler.mdsplus(t)
+    mds_handler.gen_mdsp_distance_matrix(verbose = False)
+    mean_columns = np.mean(distance_squared_matrix[indices_picked][:, indices_picked], axis = 0)
+    L_kP = mds_handler.mdsp_vecs.copy()
+    for i in range(len(L_kP)):
+        for j in range(len(L_kP[0])):
+            L_kP[i][j] /= mds_handler.eigenvalues[mds_handler.mdsp_coords[j]]
+    L_kP = np.transpose(L_kP)
+    
+    remaining_deltas = np.take(distance_squared_matrix, indices_picked, axis = 0)
+    mean_columns_spread = np.repeat(np.transpose([mean_columns]), n, axis = 1)
+    x_a = -1 * np.matmul(L_kP , (remaining_deltas - mean_columns_spread)) / 2
+    
+    final_distance_matrix = np.zeros((n, n))
+    pos_coords = len(mds_handler.mdsp_pos_vecs[0])
+    for i in range(n):
+        for j in range(n):
+            pos_distance = np.linalg.norm(x_a[:pos_coords, i] - x_a[:pos_coords, j])**2
+            neg_distance = np.linalg.norm(x_a[pos_coords:, i] - x_a[pos_coords:, j])**2
+            final_distance_matrix[i][j] = pos_distance - neg_distance
+    
+    stress = np.linalg.norm(distance_squared_matrix - final_distance_matrix)**2
+    compare_mds = mds(distance_matrix)
+    compare_mds.find_pq_embedding()
+    compare_mds.mdsplus(t)
+    compare_mds.gen_mdsp_distance_matrix(verbose = False)
+    compare_mds.additive_error()
+    print("Landmark MDSP Stress: " + str(stress))
+        
 
-def power_distance_testing():
-    # distance_squared = sampler.gen_similarity_matrix(10, lower_bound = -1, upper_bound = 1)
-    # mds_handler = mds(distance_squared)
-    # mds_handler.distance_squared_matrix = distance_squared
-    # mds_handler.find_pq_embedding()
-    # mds_handler.graph_eigenvalues()
-    k = 5
     
-    
-    def subtract_i_r(distance_matrix, i, r):
-        return_distance_matrix = distance_matrix.copy()
-        for j in range(len(distance_matrix)):
-            if j == i:
-                continue
-            return_distance_matrix[i][j] += r
-            return_distance_matrix[j][i] += r
-        return return_distance_matrix
-    
-    count = 0
-    for i in range(100000):
-        distance_squared = np.zeros((k, k), dtype=int)
-        ris = []
-        for j in range(k):
-            next_ri = np.random.randint(1, 1000, dtype=int)
-            distance_squared = subtract_i_r(distance_squared, j, next_ri)
-            ris.append(next_ri)
-        distance_squared = np.square(distance_squared)
-        if np.linalg.det(distance_squared) < 0:
-            print(distance_squared)
-            print(np.linalg.det(distance_squared))
-            print(ris)
-            count += 1
-            
-    
-    # test_distance_squared = subtract_i_r(distance_squared, 3, .5)
-    # test_distance_squared = subtract_i_r(test_distance_squared, 1, .1)
-    # test_distance_squared = subtract_i_r(test_distance_squared, 2, .6)
-    # test_distance_squared = subtract_i_r(test_distance_squared, 4, .7)
-    # test_distance_squared = subtract_i_r(test_distance_squared, 0, .2)
-    # test_distance_squared = subtract_i_r(test_distance_squared, 5, .7)
-    # print(distance_squared)
-    # print(test_distance_squared)
-    # mds_handler1 = mds(test_distance_squared)
-    # mds_handler1.distance_squared_matrix = test_distance_squared
-    # mds_handler1.find_pq_embedding()
-    # mds_handler1.graph_eigenvalues()
-    # print(mds_handler1.eigenvalues)
-    print(count)
-    
-    # print(mds_handler.eigenvalues - mds_handler1.eigenvalues)
-# generate_comparison_graphs()
-#standard_one_run()
-
-# distance_squared = sampler.sphere_metric_random(1000, .7)
-# mds_handler = mds(distance_squared)
-# mds_handler.distance_squared_matrix = distance_squared
-# mds_handler.find_pq_embedding()
-# mds_handler.graph_eigenvalues()
-
-power_distance_testing()
+distance_matrix = sampler.gen_heavy_neg(1000, 800)
+standard_one_run(distance_matrix, 500)

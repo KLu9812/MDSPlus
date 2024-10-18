@@ -2,3 +2,16 @@ Runs on Python
 
 Required Packages:
 numpy, matplotlib, keras, tensorflow, igraph, sklearn
+
+
+To test the code:
+
+Use run.py. To run mds, neuc-mds, and neuc-mds+ on some given distance matrix, do the following:
+
+standard_one_run(distance_matrix, target_dimension)
+
+There is an example at the bottom of the file. If you want to test landmark_mds run the following:
+
+landmark_mds(distance_matrix, num_landmarks, target_dimension)
+
+To look at eigenvalues of a distance matrix, you can use the .graph_eigenvalues() function
